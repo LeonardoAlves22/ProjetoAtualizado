@@ -5,9 +5,7 @@ from database.database import get_connection
 
 
 def load_vessels():
-
-    service = get_gmail_service()
-
+    
     messages = search_emails(service, 'subject:"LISTA NAVIOS"')
 
     print("Emails encontrados:", messages)
