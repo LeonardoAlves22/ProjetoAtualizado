@@ -33,7 +33,7 @@ if st.sidebar.button("Run Prospect Scan"):
     st.success("Prospects processed")
 
 render_dashboard()
-=======
+
 import streamlit as st
 
 from database.database import init_db
