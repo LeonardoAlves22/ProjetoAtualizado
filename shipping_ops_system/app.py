@@ -1,14 +1,14 @@
 import streamlit as st
 
-from shipping_ops_system.database.database import init_db
-from shipping_ops_system.ui.dashboard import render_dashboard
+from database.database import init_db
+from ui.dashboard import render_dashboard
 
-from shipping_ops_system.services.vessel_loader import load_vessels
-from shipping_ops_system.services.prospect_engine import process_prospects
+from services.vessel_loader import load_vessels
+from services.prospect_engine import process_prospects
 
-from shipping_ops_system.services.free_pratique_checker import check_free_pratique
-from shipping_ops_system.services.anuencia_checker import check_entry_clearance, check_departure_clearance
-from shipping_ops_system.services.remessa_checker import check_remessa
+from services.free_pratique_checker import check_free_pratique
+from services.anuencia_checker import check_entry_clearance, check_departure_clearance
+from services.remessa_checker import check_remessa
 
 init_db()
 
