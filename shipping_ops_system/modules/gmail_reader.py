@@ -1,158 +1,50 @@
-import base64
-from email import message_from_bytes
-from email.utils import parsedate_to_datetime
-
-from googleapiclient.discovery import build
-from google.oauth2.credentials import Credentials
-import pytz
-import time
-import base64
-from email import message_from_bytes
-from bs4 import BeautifulSoup
-
-from bs4 import BeautifulSoup
-
-SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
+import imaplib
+import email
+import streamlit as st
 
 
-# ---------------------------------------------------
-# CONECTAR AO GMAIL
-# ---------------------------------------------------
+def get_gmail_connection():
 
-def get_gmail_service():
+    user = st.secrets["GMAIL_USER"]
+    password = st.secrets["GMAIL_APP_PASSWORD"]
 
-    creds = Credentials.from_authorized_user_file(
-        "token.json",
-        SCOPES
-    )
+    mail = imaplib.IMAP4_SSL("imap.gmail.com")
+    mail.login(user, password)
 
-    service = build("gmail", "v1", credentials=creds)
-
-    return service
+    return mail
 
 
-# ---------------------------------------------------
-# BUSCAR EMAILS
-# ---------------------------------------------------
+def search_emails(subject_filter):
 
-def search_emails(service, query):
+    mail = get_gmail_connection()
 
-    result = service.users().messages().list(
-        userId="me",
-        q=query,
-        maxResults=30
-    ).execute()
+    mail.select("inbox")
 
-    messages = result.get("messages", [])
+    status, messages = mail.search(None, f'(SUBJECT "{subject_filter}")')
 
-    return messages
-def get_email_subject(service, msg_id):
+    email_ids = messages[0].split()
 
-    msg = service.users().messages().get(
-        userId="me",
-        id=msg_id,
-        format="metadata",
-        metadataHeaders=["Subject"]
-    ).execute()
+    emails = []
 
-    headers = msg["payload"]["headers"]
+    for e_id in email_ids[-20:]:
 
-    for h in headers:
-        if h["name"] == "Subject":
-            return h["value"]
+        status, msg_data = mail.fetch(e_id, "(RFC822)")
+        msg = email.message_from_bytes(msg_data[0][1])
 
-    return ""
+        subject = msg["subject"]
 
-# ---------------------------------------------------
-# OBTER CORPO DO EMAIL
-# ---------------------------------------------------
+        body = ""
 
-def get_email_body(service, msg_id):
+        if msg.is_multipart():
+            for part in msg.walk():
+                if part.get_content_type() == "text/plain":
+                    body = part.get_payload(decode=True).decode(errors="ignore")
+        else:
+            body = msg.get_payload(decode=True).decode(errors="ignore")
 
-    attempts = 3
+        emails.append({
+            "subject": subject,
+            "body": body
+        })
 
-    for attempt in range(attempts):
-
-        try:
-
-            msg = service.users().messages().get(
-                userId="me",
-                id=msg_id,
-                format="raw"
-            ).execute()
-
-            raw = base64.urlsafe_b64decode(msg["raw"].encode("ASCII"))
-
-            mime_msg = message_from_bytes(raw)
-
-            body = ""
-
-            if mime_msg.is_multipart():
-
-                for part in mime_msg.walk():
-
-                    content_type = part.get_content_type()
-
-                    if content_type == "text/plain":
-
-                        payload = part.get_payload(decode=True)
-
-                        if payload:
-                            body += payload.decode(errors="ignore")
-
-                    elif content_type == "text/html":
-
-                        payload = part.get_payload(decode=True)
-
-                        if payload:
-
-                            html = payload.decode(errors="ignore")
-
-                            soup = BeautifulSoup(html, "html.parser")
-
-                            body += soup.get_text()
-
-            else:
-
-                payload = mime_msg.get_payload(decode=True)
-
-                if payload:
-                    body = payload.decode(errors="ignore")
-
-            return body
-
-        except Exception as e:
-
-            print(f"Erro ao ler email {msg_id}: {e}")
-
-            time.sleep(2)
-
-    return ""
-
-# ---------------------------------------------------
-# OBTER DATA DO EMAIL
-# ---------------------------------------------------
-
-def get_email_metadata(service, msg_id):
-
-    msg = service.users().messages().get(
-        userId="me",
-        id=msg_id,
-        format="metadata",
-        metadataHeaders=["Date"]
-    ).execute()
-
-    headers = msg["payload"]["headers"]
-
-    for h in headers:
-
-        if h["name"] == "Date":
-
-            email_date = parsedate_to_datetime(h["value"])
-
-            # converter para horário Brasil
-            brasil = pytz.timezone("America/Sao_Paulo")
-
-            return email_date.astimezone(brasil)
-
-    return None
+    return emails
