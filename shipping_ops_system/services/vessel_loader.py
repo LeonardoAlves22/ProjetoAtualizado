@@ -1,4 +1,5 @@
-from modules.gmail_reader import get_gmail_service, search_emails, get_email_body
+from modules.gmail_reader import search_emails
+
 from modules.prospect_parser import extract_vessel_list
 from database.database import get_connection
 
