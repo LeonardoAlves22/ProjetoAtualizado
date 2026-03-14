@@ -1,9 +1,4 @@
-from modules.gmail_reader import (
-    get_gmail_service,
-    search_emails,
-    get_email_body,
-    get_email_metadata
-)
+from modules.gmail_reader import search_emails
 
 from modules.prospect_parser import detect_vessels, valid_prospect_subject, body_contains_schedule
 from modules.eta_extractor import extract_dates
